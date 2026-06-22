@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Circle Bambu Monitor wiring diagram</title>
+  <desc id="desc">Seven-wire connection diagram between an ESP32-C3 board and a GC9A01 round TFT display.</desc>
+  <defs>
+    <style>
+      .bg { fill: #0f1115; }
+      .panel { fill: #171a21; stroke: #303540; stroke-width: 2; }
+      .board { fill: #1f5f4a; stroke: #72d59c; stroke-width: 2.5; }
+      .display-board { fill: #22435f; stroke: #7bc4ff; stroke-width: 2.5; }
+      .screen { fill: #05070a; stroke: #2e333d; stroke-width: 8; }
+      .screen-ring { fill: none; stroke: #00c853; stroke-width: 16; stroke-linecap: round; }
+      .pin { fill: #262b34; stroke: #596170; stroke-width: 1.5; }
+      .label { fill: #f4f7fb; font: 700 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .small { fill: #aeb7c4; font: 500 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .pintext { fill: #f4f7fb; font: 700 18px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .wiretext { fill: #f4f7fb; font: 700 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .note { fill: #aeb7c4; font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .wire { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+      .pwr { stroke: #ff5252; }
+      .gnd { stroke: #9aa3ad; }
+      .cs { stroke: #ffb300; }
+      .dc { stroke: #29b6f6; }
+      .rst { stroke: #ab47bc; }
+      .sclk { stroke: #66bb6a; }
+      .mosi { stroke: #ec407a; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1200" height="900" rx="0"/>
+  <rect class="panel" x="42" y="42" width="1116" height="816" rx="28"/>
+
+  <text class="label" x="80" y="96">Circle Bambu Monitor Wiring</text>
+  <text class="small" x="80" y="126">ESP32-C3 to GC9A01 round TFT display, 7 wires total</text>
+
+  <g id="esp32">
+    <rect class="board" x="96" y="172" width="320" height="472" rx="22"/>
+    <rect fill="#183f32" x="134" y="222" width="244" height="104" rx="12"/>
+    <rect fill="#d7dde6" x="206" y="598" width="100" height="30" rx="8"/>
+    <text class="label" x="148" y="202">ESP32-C3</text>
+    <text class="small" x="156" y="282">Development board</text>
+
+    <g>
+      <rect class="pin" x="356" y="354" width="42" height="26" rx="6"/><text class="pintext" x="244" y="374">3V3</text>
+      <rect class="pin" x="356" y="394" width="42" height="26" rx="6"/><text class="pintext" x="244" y="414">GND</text>
+      <rect class="pin" x="356" y="434" width="42" height="26" rx="6"/><text class="pintext" x="224" y="454">GPIO 7</text>
+      <rect class="pin" x="356" y="474" width="42" height="26" rx="6"/><text class="pintext" x="224" y="494">GPIO 2</text>
+      <rect class="pin" x="356" y="514" width="42" height="26" rx="6"/><text class="pintext" x="224" y="534">GPIO 3</text>
+      <rect class="pin" x="356" y="554" width="42" height="26" rx="6"/><text class="pintext" x="224" y="574">GPIO 4</text>
+      <rect class="pin" x="356" y="594" width="42" height="26" rx="6"/><text class="pintext" x="224" y="614">GPIO 6</text>
+    </g>
+  </g>
+
+  <g id="display">
+    <rect class="display-board" x="620" y="172" width="250" height="472" rx="22"/>
+    <circle class="screen" cx="745" cy="292" r="54"/>
+    <path class="screen-ring" d="M 712 318 A 42 42 0 1 1 785 283"/>
+    <text class="pintext" x="723" y="288">81%</text>
+    <text class="small" x="716" y="311">Print</text>
+    <text class="label" x="660" y="202">GC9A01 TFT</text>
+
+    <g>
+      <rect class="pin" x="636" y="354" width="42" height="26" rx="6"/><text class="pintext" x="702" y="374">VCC</text>
+      <rect class="pin" x="636" y="394" width="42" height="26" rx="6"/><text class="pintext" x="702" y="414">GND</text>
+      <rect class="pin" x="636" y="434" width="42" height="26" rx="6"/><text class="pintext" x="702" y="454">CS</text>
+      <rect class="pin" x="636" y="474" width="42" height="26" rx="6"/><text class="pintext" x="702" y="494">DC</text>
+      <rect class="pin" x="636" y="514" width="42" height="26" rx="6"/><text class="pintext" x="702" y="534">RST</text>
+      <rect class="pin" x="636" y="554" width="42" height="26" rx="6"/><text class="pintext" x="702" y="574">SCL</text>
+      <rect class="pin" x="636" y="594" width="42" height="26" rx="6"/><text class="pintext" x="702" y="614">SDA</text>
+    </g>
+  </g>
+
+  <g id="wires">
+    <path class="wire pwr" d="M 398 367 C 460 330, 570 330, 636 367"/>
+    <path class="wire gnd" d="M 398 407 C 460 382, 570 382, 636 407"/>
+    <path class="wire cs" d="M 398 447 C 460 430, 570 430, 636 447"/>
+    <path class="wire dc" d="M 398 487 C 460 480, 570 480, 636 487"/>
+    <path class="wire rst" d="M 398 527 C 460 530, 570 530, 636 527"/>
+    <path class="wire sclk" d="M 398 567 C 460 580, 570 580, 636 567"/>
+    <path class="wire mosi" d="M 398 607 C 460 630, 570 630, 636 607"/>
+
+    <text class="wiretext" x="452" y="334">3V3 to VCC</text>
+    <text class="wiretext" x="454" y="386">GND to GND</text>
+    <text class="wiretext" x="460" y="428">GPIO7 to CS</text>
+    <text class="wiretext" x="460" y="475">GPIO2 to DC</text>
+    <text class="wiretext" x="454" y="524">GPIO3 to RST</text>
+    <text class="wiretext" x="442" y="576">GPIO4 to SCLK</text>
+    <text class="wiretext" x="442" y="638">GPIO6 to MOSI</text>
+  </g>
+
+  <text class="note" x="80" y="704">BL/LED note: connect it to 3V3 for always-on backlight, or wire it to a GPIO and adjust the firmware.</text>
+</svg>

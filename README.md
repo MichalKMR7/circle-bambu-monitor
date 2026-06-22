@@ -29,15 +29,21 @@ Flash the latest release directly from Chrome or Edge:
 
 The default firmware pin mapping is:
 
+![ESP32-C3 to GC9A01 wiring diagram](docs/images/wiring-diagram.svg)
+
 | Display Pin | ESP32-C3 Pin |
 | --- | --- |
+| VCC | 3V3 |
+| GND | GND |
 | CS | GPIO 7 |
 | DC | GPIO 2 |
 | RST | GPIO 3 |
-| SCLK | GPIO 4 |
-| MOSI | GPIO 6 |
+| SCL / SCLK | GPIO 4 |
+| SDA / MOSI | GPIO 6 |
 
 Adjust the pin definitions near the top of `circle_bambu_monitor.ino` if your board is wired differently.
+
+If your display exposes a `BL` or `LED` pin, connect it to `3V3` for an always-on backlight, or wire it to a GPIO and adjust the firmware.
 
 ## Arduino Libraries
 
