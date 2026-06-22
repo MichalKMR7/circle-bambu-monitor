@@ -1,5 +1,7 @@
 # Circle Bambu Monitor
 
+![Circle Bambu Monitor printing render](docs/images/hero-render.jpg)
+
 Circle Bambu Monitor is a small ESP32-C3 companion display for Bambu Lab printers exposed through Home Assistant entities. It uses a round GC9A01 TFT display, connects to Home Assistant over REST and WebSocket, and shows printer state, progress, finish time, temperatures, layers, and filament information.
 
 The device includes a local web configuration portal, WiFi scanning, Home Assistant entity search, timezone selection, OTA support, and a factory reset option.
@@ -9,6 +11,12 @@ The device includes a local web configuration portal, WiFi scanning, Home Assist
 Flash the latest release directly from Chrome or Edge:
 
 [Open Circle Bambu Monitor Web Installer](https://michalkmr7.github.io/circle-bambu-monitor/web-installer/)
+
+## Gallery
+
+| Printing | Setup |
+| --- | --- |
+| ![Printing status screen](docs/images/printing-render.jpg) | ![Setup mode screen](docs/images/setup-render.jpg) |
 
 ## Hardware
 
