@@ -4,6 +4,12 @@ Circle Bambu Monitor is a small ESP32-C3 companion display for Bambu Lab printer
 
 The device includes a local web configuration portal, WiFi scanning, Home Assistant entity search, timezone selection, OTA support, and a factory reset option.
 
+## Web Installer
+
+Flash the latest release directly from Chrome or Edge:
+
+[Open Circle Bambu Monitor Web Installer](https://michalkmr7.github.io/circle-bambu-monitor/web-installer/)
+
 ## Hardware
 
 - ESP32-C3 development board
@@ -73,9 +79,9 @@ Common entity types include:
 - total layers
 - filament weight
 
-## Web Installer
+## Firmware Releases
 
-This repository includes a starter ESP Web Tools installer in `web-installer/`. It is not complete until compiled firmware binaries are exported and placed into `web-installer/firmware/`.
+This repository includes an ESP Web Tools installer in `web-installer/` and a release firmware binary in `web-installer/firmware/`.
 
 See [Web Flasher Setup](docs/web-flasher.md) for the release workflow.
 
