@@ -1,0 +1,16 @@
+{
+  "name": "Circle Bambu Monitor",
+  "version": "0.11.15",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "parts": [
+        {
+          "path": "firmware/circle-bambu-monitor-0.11.15-merged.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
