@@ -9,6 +9,7 @@
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_GC9A01A.h>
+#define LV_CONF_INCLUDE_SIMPLE
 #include <lvgl.h>
 #include <time.h>
 #include <stdlib.h>
@@ -18,8 +19,8 @@ using namespace websockets;
 /**********************************************************
  * FIRMWARE VERSION
  **********************************************************/
-#define FW_VERSION "0.11.16"
-#define FW_DISPLAY_VERSION "0.11.16"
+#define FW_VERSION "0.11.17"
+#define FW_DISPLAY_VERSION "0.11.17"
 
 /**********************************************************
  * DISPLAY PIN CONFIGURATION
@@ -66,6 +67,7 @@ struct Config {
   String entityProgress;
   String entityFilament;
   String entityFinishTime;
+  bool showRemainingTimeInLoop = false;
   String entityNozzleTemp;
   String entityBedTemp;
   String entityCurrentLayer;
@@ -172,6 +174,8 @@ lv_obj_t *detail_label;
 void serviceDisplayDuringSetup(uint16_t waitMs = 2);
 void showBootMessage(String title, String detail = "");
 void normalizeTimeZoneConfig();
+String finishTimeText();
+String printRemainingTimeText();
 
 /**********************************************************
  * TIME HELPER
@@ -225,6 +229,7 @@ void loadConfig() {
   cfg.entityProgress = prefs.getString("ent_progress", "");
   cfg.entityFilament = prefs.getString("ent_filament", "");
   cfg.entityFinishTime = prefs.getString("ent_finish", "");
+  cfg.showRemainingTimeInLoop = prefs.getBool("show_remain", prefs.getBool("finish_rem", false));
   cfg.entityNozzleTemp = prefs.getString("ent_nozzle", "");
   cfg.entityBedTemp = prefs.getString("ent_bed", "");
   cfg.entityCurrentLayer = prefs.getString("ent_layer", "");
@@ -257,6 +262,7 @@ void saveConfig() {
   prefs.putString("ent_progress", cfg.entityProgress);
   prefs.putString("ent_filament", cfg.entityFilament);
   prefs.putString("ent_finish", cfg.entityFinishTime);
+  prefs.putBool("show_remain", cfg.showRemainingTimeInLoop);
   prefs.putString("ent_nozzle", cfg.entityNozzleTemp);
   prefs.putString("ent_bed", cfg.entityBedTemp);
   prefs.putString("ent_layer", cfg.entityCurrentLayer);
@@ -411,6 +417,7 @@ String htmlPage() {
 body{background:#111;color:white;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:20px;}
 .card{max-width:550px;margin:auto;background:#1c1c1e;padding:20px;border-radius:18px;}
 input,select{width:100%;padding:12px;margin-top:5px;margin-bottom:10px;border-radius:10px;border:none;background:#2c2c2e;color:white;box-sizing:border-box;}
+input[type=checkbox]{width:auto;margin:0;}
 button{width:100%;padding:14px;border:none;border-radius:12px;background:#00AE42;color:white;font-size:18px;font-weight:bold;margin-top:10px;}
 button.secondary{background:#3a3a3c;font-size:15px;padding:11px;}
 a{color:#00AE42;text-decoration:none;}
@@ -418,6 +425,15 @@ a.danger{color:#ff453a;}
 label{display:block;margin-top:10px;}
 .small{color:#aaa;font-size:14px;line-height:1.4;}
 .status{color:#aaa;font-size:13px;min-height:18px;margin-top:6px;}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px;margin-bottom:10px;}
+.switch-text{color:#ddd;font-size:15px;line-height:1.35;}
+.switch-text small{display:block;color:#aaa;font-size:13px;margin-top:2px;}
+.switch{position:relative;display:inline-block;width:48px;height:28px;flex:0 0 48px;margin-top:0;}
+.switch input{opacity:0;width:0;height:0;padding:0;margin:0;}
+.slider{position:absolute;cursor:pointer;inset:0;background:#3a3a3c;border-radius:999px;transition:.2s;}
+.slider:before{content:"";position:absolute;height:22px;width:22px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s;}
+.switch input:checked+.slider{background:#00AE42;}
+.switch input:checked+.slider:before{transform:translateX(20px);}
 .suggestions{display:none;background:#2c2c2e;border:1px solid #444;border-radius:10px;margin-top:-4px;margin-bottom:10px;overflow:hidden;}
 .suggestion{padding:10px 12px;border-bottom:1px solid #3a3a3c;cursor:pointer;word-break:break-word;}
 .suggestion:last-child{border-bottom:none;}
@@ -692,6 +708,10 @@ window.addEventListener('load',setupTimeZoneAutocomplete);
 
 <label>Finish Time Entity</label>
 <input class="entity-input" name="ent_finish" value="%ENT_FINISH%">
+<label class="switch-row">
+  <span class="switch-text">Show remaining time<small>Add calculated remaining time to the print detail loop.</small></span>
+  <span class="switch"><input name="show_remaining" type="checkbox" value="1" %SHOW_REMAINING_CHECKED%><span class="slider"></span></span>
+</label>
 
 <label>Nozzle Temp Entity</label>
 <input class="entity-input" name="ent_nozzle" value="%ENT_NOZZLE%">
@@ -826,6 +846,7 @@ window.addEventListener('load',setupEntityAutocomplete);
   page.replace("%ENT_PROGRESS%", htmlEscape(cfg.entityProgress));
   page.replace("%ENT_FILAMENT%", htmlEscape(cfg.entityFilament));
   page.replace("%ENT_FINISH%", htmlEscape(cfg.entityFinishTime));
+  page.replace("%SHOW_REMAINING_CHECKED%", cfg.showRemainingTimeInLoop ? "checked" : "");
   page.replace("%ENT_NOZZLE%", htmlEscape(cfg.entityNozzleTemp));
   page.replace("%ENT_BED%", htmlEscape(cfg.entityBedTemp));
   page.replace("%ENT_LAYER%", htmlEscape(cfg.entityCurrentLayer));
@@ -902,6 +923,9 @@ a{color:#00AE42;text-decoration:none;}
   addRow("Status", data.status);
   addRow("Progress", isnan(data.progress) ? "-" : String(data.progress, 1));
   addRow("Filament", data.filament);
+  addRow("Show Remaining Time", cfg.showRemainingTimeInLoop ? "Yes" : "No");
+  addRow("Finish Time", finishTimeText());
+  addRow("Remaining Time", printRemainingTimeText());
   addRow("Nozzle", isnan(data.nozzleTemp) ? "-" : String(data.nozzleTemp, 1));
   addRow("Bed", isnan(data.bedTemp) ? "-" : String(data.bedTemp, 1));
   addRow("Layer", (isnan(data.currentLayer) || isnan(data.totalLayers)) ? "-" : String((int)data.currentLayer) + " / " + String((int)data.totalLayers));
@@ -1301,7 +1325,10 @@ void handleSave() {
   if (server.hasArg("ent_status")) cfg.entityStatus = server.arg("ent_status");
   if (server.hasArg("ent_progress")) cfg.entityProgress = server.arg("ent_progress");
   if (server.hasArg("ent_filament")) cfg.entityFilament = server.arg("ent_filament");
-  if (server.hasArg("ent_finish")) cfg.entityFinishTime = server.arg("ent_finish");
+  if (server.hasArg("ent_finish")) {
+    cfg.entityFinishTime = server.arg("ent_finish");
+    cfg.showRemainingTimeInLoop = server.hasArg("show_remaining");
+  }
   if (server.hasArg("ent_nozzle")) cfg.entityNozzleTemp = server.arg("ent_nozzle");
   if (server.hasArg("ent_bed")) cfg.entityBedTemp = server.arg("ent_bed");
   if (server.hasArg("ent_layer")) cfg.entityCurrentLayer = server.arg("ent_layer");
@@ -1929,8 +1956,303 @@ int fourDigitsAt(String value, int index) {
          (value[index + 3] - '0');
 }
 
-String finishTimeText() {
-  String value = data.finishTime;
+long digitsToLong(String value, int start, int end) {
+  if (start >= end) return -1;
+
+  long result = 0;
+
+  for (int i = start; i < end; i++) {
+    if (!isDigitAt(value, i)) return -1;
+    result = result * 10 + (value[i] - '0');
+  }
+
+  return result;
+}
+
+bool hasFourDigitYear(String value) {
+  for (int i = 0; i <= (int)value.length() - 4; i++) {
+    int year = fourDigitsAt(value, i);
+    if (year >= 1970 && year <= 2100) return true;
+  }
+
+  return false;
+}
+
+bool looksLikeDateTimeText(String value) {
+  value.trim();
+
+  if (value.length() >= 10 &&
+      isDigitAt(value, 0) &&
+      isDigitAt(value, 1) &&
+      isDigitAt(value, 2) &&
+      isDigitAt(value, 3) &&
+      value[4] == '-' &&
+      isDigitAt(value, 5) &&
+      isDigitAt(value, 6) &&
+      value[7] == '-' &&
+      isDigitAt(value, 8) &&
+      isDigitAt(value, 9)) {
+    return true;
+  }
+
+  String normalized = value;
+  normalized.toLowerCase();
+
+  if (!hasFourDigitYear(value)) return false;
+
+  return normalized.indexOf("jan") >= 0 ||
+         normalized.indexOf("feb") >= 0 ||
+         normalized.indexOf("mar") >= 0 ||
+         normalized.indexOf("apr") >= 0 ||
+         normalized.indexOf("may") >= 0 ||
+         normalized.indexOf("jun") >= 0 ||
+         normalized.indexOf("jul") >= 0 ||
+         normalized.indexOf("aug") >= 0 ||
+         normalized.indexOf("sep") >= 0 ||
+         normalized.indexOf("oct") >= 0 ||
+         normalized.indexOf("nov") >= 0 ||
+         normalized.indexOf("dec") >= 0;
+}
+
+String durationMinutesText(long totalMinutes) {
+  if (totalMinutes < 0) return "";
+
+  long hours = totalMinutes / 60;
+  long minutes = totalMinutes % 60;
+
+  char buffer[20];
+
+  if (hours > 0) {
+    if (minutes > 0) {
+      snprintf(buffer, sizeof(buffer), "%ldh%02ldm", hours, minutes);
+    } else {
+      snprintf(buffer, sizeof(buffer), "%ldh", hours);
+    }
+  } else {
+    snprintf(buffer, sizeof(buffer), "%ldm", minutes);
+  }
+
+  return String(buffer);
+}
+
+bool isAlphaChar(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool isNumberStartChar(char c) {
+  return (c >= '0' && c <= '9') || c == '.';
+}
+
+float durationUnitMultiplier(String unit) {
+  unit.toLowerCase();
+
+  if (unit == "" ||
+      unit == "m" ||
+      unit == "min" ||
+      unit == "mins" ||
+      unit == "minute" ||
+      unit == "minutes") {
+    return 1;
+  }
+
+  if (unit == "h" ||
+      unit == "hr" ||
+      unit == "hrs" ||
+      unit == "hour" ||
+      unit == "hours") {
+    return 60;
+  }
+
+  if (unit == "s" ||
+      unit == "sec" ||
+      unit == "secs" ||
+      unit == "second" ||
+      unit == "seconds") {
+    return 1.0f / 60.0f;
+  }
+
+  if (unit == "d" ||
+      unit == "day" ||
+      unit == "days") {
+    return 1440;
+  }
+
+  if (unit == "w" ||
+      unit == "week" ||
+      unit == "weeks") {
+    return 10080;
+  }
+
+  if (unit == "mo" ||
+      unit == "mos" ||
+      unit == "month" ||
+      unit == "months") {
+    return 43200;
+  }
+
+  if (unit == "y" ||
+      unit == "yr" ||
+      unit == "yrs" ||
+      unit == "year" ||
+      unit == "years") {
+    return 525600;
+  }
+
+  return -1;
+}
+
+long durationTextMinutes(String value) {
+  value.trim();
+
+  if (value.length() >= 10 && value[4] == '-' && value[7] == '-') return -1;
+
+  const char* text = value.c_str();
+  const char* p = text;
+  float totalMinutes = 0;
+  bool matched = false;
+
+  while (*p) {
+    while (*p && !isNumberStartChar(*p)) {
+      p++;
+    }
+
+    if (!*p) break;
+
+    char* endPtr = nullptr;
+    float amount = strtof(p, &endPtr);
+
+    if (endPtr == p) {
+      p++;
+      continue;
+    }
+
+    if (amount < 0) return -1;
+
+    p = endPtr;
+
+    while (*p == ' ' || *p == '\t') {
+      p++;
+    }
+
+    String unit = "";
+
+    while (*p && isAlphaChar(*p)) {
+      unit += *p;
+      p++;
+    }
+
+    if (unit.length() == 0) {
+      const char* q = p;
+
+      while (*q == ' ' || *q == '\t') {
+        q++;
+      }
+
+      if (*q != '\0') return -1;
+    }
+
+    float multiplier = durationUnitMultiplier(unit);
+    if (multiplier < 0) return -1;
+
+    totalMinutes += amount * multiplier;
+    matched = true;
+  }
+
+  if (!matched) return -1;
+
+  return (long)round(totalMinutes);
+}
+
+String remainingTimeText(String value) {
+  value.trim();
+  String normalized = value;
+  normalized.toLowerCase();
+
+  if (normalized.isEmpty() || normalized == "unknown" || normalized == "unavailable" || normalized == "none") return "";
+
+  int firstColon = value.indexOf(':');
+
+  if (firstColon > 0) {
+    int secondColon = value.indexOf(':', firstColon + 1);
+    int minuteEnd = secondColon >= 0 ? secondColon : value.length();
+    long hours = digitsToLong(value, 0, firstColon);
+    long minutes = digitsToLong(value, firstColon + 1, minuteEnd);
+    long seconds = secondColon >= 0 ? digitsToLong(value, secondColon + 1, value.length()) : 0;
+
+    if (hours >= 0 &&
+        minutes >= 0 && minutes <= 59 &&
+        seconds >= 0 && seconds <= 59) {
+      return durationMinutesText(hours * 60 + minutes + (seconds >= 30 ? 1 : 0));
+    }
+  }
+
+  long durationMinutes = durationTextMinutes(value);
+  if (durationMinutes >= 0) return durationMinutesText(durationMinutes);
+
+  if (looksLikeDateTimeText(value)) return "";
+
+  return value;
+}
+
+bool finishUtcFromText(String value, time_t* utc) {
+  value.trim();
+
+  if (value.length() >= 19 &&
+      value[4] == '-' &&
+      value[7] == '-' &&
+      (value[10] == 'T' || value[10] == ' ')) {
+    int year = fourDigitsAt(value, 0);
+    int month = twoDigitsAt(value, 5);
+    int day = twoDigitsAt(value, 8);
+    int hour = twoDigitsAt(value, 11);
+    int minute = twoDigitsAt(value, 14);
+    int second = twoDigitsAt(value, 17);
+
+    if (year > 1970 && month >= 1 && month <= 12 && day >= 1 && day <= 31 &&
+        hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && second >= 0 && second <= 59) {
+      int offsetSeconds = 0;
+      int offsetIndex = -1;
+
+      for (int i = 19; i < (int)value.length(); i++) {
+        if (value[i] == 'Z' || value[i] == 'z') {
+          offsetIndex = i;
+          break;
+        }
+
+        if (value[i] == '+' || value[i] == '-') {
+          offsetIndex = i;
+          break;
+        }
+      }
+
+      if (offsetIndex >= 0 &&
+          (value[offsetIndex] == '+' || value[offsetIndex] == '-') &&
+          value.length() >= (unsigned)(offsetIndex + 3)) {
+        int offsetHours = twoDigitsAt(value, offsetIndex + 1);
+        int offsetMinutes = 0;
+
+        if (value.length() >= (unsigned)(offsetIndex + 6) && value[offsetIndex + 3] == ':') {
+          offsetMinutes = twoDigitsAt(value, offsetIndex + 4);
+        } else if (value.length() >= (unsigned)(offsetIndex + 5)) {
+          offsetMinutes = twoDigitsAt(value, offsetIndex + 3);
+        }
+
+        if (offsetHours >= 0 && offsetMinutes >= 0) {
+          offsetSeconds = offsetHours * 3600 + offsetMinutes * 60;
+          if (value[offsetIndex] == '-') offsetSeconds = -offsetSeconds;
+        }
+      }
+
+      long days = daysFromCivil(year, (unsigned)month, (unsigned)day);
+      *utc = (time_t)((long long)days * 86400LL + hour * 3600L + minute * 60L + second - offsetSeconds);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+String finishClockTimeText(String value) {
   value.trim();
 
   if (value.isEmpty() || value == "unknown" || value == "unavailable") return "";
@@ -1944,39 +2266,66 @@ String finishTimeText() {
     return value;
   }
 
-  if (value.length() >= 19 && value[4] == '-' && value[7] == '-' && value[10] == 'T') {
-    int year = fourDigitsAt(value, 0);
-    int month = twoDigitsAt(value, 5);
-    int day = twoDigitsAt(value, 8);
-    int hour = twoDigitsAt(value, 11);
-    int minute = twoDigitsAt(value, 14);
-    int second = twoDigitsAt(value, 17);
+  time_t utc = 0;
 
-    if (year > 1970 && month >= 1 && month <= 12 && day >= 1 && day <= 31 &&
-        hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && second >= 0 && second <= 59) {
-      int offsetSeconds = 0;
+  if (finishUtcFromText(value, &utc)) {
+    struct tm* local = localtime(&utc);
 
-      if (value.length() >= 25 && (value[19] == '+' || value[19] == '-')) {
-        int offsetHours = twoDigitsAt(value, 20);
-        int offsetMinutes = twoDigitsAt(value, 23);
-
-        if (offsetHours >= 0 && offsetMinutes >= 0) {
-          offsetSeconds = offsetHours * 3600 + offsetMinutes * 60;
-          if (value[19] == '-') offsetSeconds = -offsetSeconds;
-        }
-      }
-
-      long days = daysFromCivil(year, (unsigned)month, (unsigned)day);
-      time_t utc = (time_t)((long long)days * 86400LL + hour * 3600L + minute * 60L + second - offsetSeconds);
-      struct tm* local = localtime(&utc);
-
-      char buffer[16];
-      snprintf(buffer, sizeof(buffer), "%02d:%02d", local->tm_hour, local->tm_min);
-      return String(buffer);
-    }
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%02d:%02d", local->tm_hour, local->tm_min);
+    return String(buffer);
   }
 
+  if (looksLikeDateTimeText(value)) return "";
+
   return value;
+}
+
+String remainingFromFinishTimeText(String value) {
+  value.trim();
+
+  if (value.isEmpty() || value == "unknown" || value == "unavailable") return "";
+
+  time_t now = time(nullptr);
+  if (now < 100000) return "";
+
+  time_t finishUtc = 0;
+
+  if (finishUtcFromText(value, &finishUtc)) {
+    long remainingSeconds = (long)difftime(finishUtc, now);
+    if (remainingSeconds < 0) remainingSeconds = 0;
+    return durationMinutesText((remainingSeconds + 30) / 60);
+  }
+
+  if (value.length() == 5 &&
+      isDigitAt(value, 0) &&
+      isDigitAt(value, 1) &&
+      value[2] == ':' &&
+      isDigitAt(value, 3) &&
+      isDigitAt(value, 4)) {
+    int finishMinutes = twoDigitsAt(value, 0) * 60 + twoDigitsAt(value, 3);
+    struct tm* local = localtime(&now);
+    int currentMinutes = local->tm_hour * 60 + local->tm_min;
+    int remainingMinutes = finishMinutes - currentMinutes;
+
+    if (remainingMinutes < 0) remainingMinutes += 1440;
+
+    return durationMinutesText(remainingMinutes);
+  }
+
+  return "";
+}
+
+String printRemainingTimeText() {
+  String value = data.finishTime;
+  String remaining = remainingFromFinishTimeText(value);
+  if (remaining.length() > 0) return remaining;
+
+  return remainingTimeText(value);
+}
+
+String finishTimeText() {
+  return finishClockTimeText(data.finishTime);
 }
 
 String filamentText() {
@@ -2519,18 +2868,30 @@ void updateUi() {
     lv_label_set_text(bed_temp_label, bed.c_str());
     setTempRowVisible(true);
 
-    int screen = nowSec % 9;
-
     String finish = finishTimeText();
+    String remaining = cfg.showRemainingTimeInLoop ? printRemainingTimeText() : "";
+    String layer = "";
+    String weight = "";
 
-    if (screen < 3 && finish.length() > 0) {
-      lv_label_set_text(detail_label, finish.c_str());
-    } else if (screen < 6 && !isnan(data.currentLayer) && !isnan(data.totalLayers)) {
-      String layer = String((int)data.currentLayer) + " / " + String((int)data.totalLayers);
-      lv_label_set_text(detail_label, layer.c_str());
-    } else if (!isnan(data.filamentWeight)) {
-      String weight = String(data.filamentWeight, 0) + " g";
-      lv_label_set_text(detail_label, weight.c_str());
+    if (!isnan(data.currentLayer) && !isnan(data.totalLayers)) {
+      layer = String((int)data.currentLayer) + " / " + String((int)data.totalLayers);
+    }
+
+    if (!isnan(data.filamentWeight)) {
+      weight = String(data.filamentWeight, 0) + " g";
+    }
+
+    String details[4];
+    int detailCount = 0;
+
+    if (finish.length() > 0) details[detailCount++] = finish;
+    if (remaining.length() > 0) details[detailCount++] = remaining;
+    if (layer.length() > 0) details[detailCount++] = layer;
+    if (weight.length() > 0) details[detailCount++] = weight;
+
+    if (detailCount > 0) {
+      int detailIndex = (nowSec / 3) % detailCount;
+      lv_label_set_text(detail_label, details[detailIndex].c_str());
     } else {
       lv_label_set_text(detail_label, "");
     }
